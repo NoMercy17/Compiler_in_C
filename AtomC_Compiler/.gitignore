@@ -1,0 +1,7 @@
+
+# Ignore a specific folder
+NotNow/
+
+
+
+git remote add origin https://github.com/NoMercy17/Compiler_in_C.git
