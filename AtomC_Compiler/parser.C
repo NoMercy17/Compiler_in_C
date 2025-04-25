@@ -6,12 +6,6 @@
 #include "lexer.h"
 #include "parser.h"
 
-// typedef struct Node{
-//     char *value;
-//     TokenType type;
-//     struct Node *left;
-//     struct Node *right;
-// }Node;
 
 void print_error(char *error_type) {
     char *error = strdup(error_type); // Make a copy of the string
@@ -20,14 +14,14 @@ void print_error(char *error_type) {
     exit(1);
 }
 
-void print_tree(Node *node, int indent, char* indentifier){
+void print_tree(Node *node, int indent, char* indentifier) {
     if(node == NULL)
         return;
-    for(int i=0; i< indent; i++){
+    for(int i=0; i< indent; i++) {
         printf(" ");
     }
     printf("%s -> ", indentifier);
-    for(size_t i =0; (*node).value[i] != '\0'; i++){
+    for(size_t i =0; (*node).value[i] != '\0'; i++) {
         printf("%c",(*node).value[i]);
     }
     printf("\n");
@@ -35,7 +29,7 @@ void print_tree(Node *node, int indent, char* indentifier){
     print_tree((*node).right, indent +1, strdup("right"));
 }
 
-Node *init_node(Node *node, char *value, TokenType type){
+Node *init_node(Node *node, char *value, TokenType type) {
     node = (Node*)malloc(sizeof(Node));
     (*node).value = (char*)malloc(sizeof(char) * 2);
     (*node).value = value;
@@ -44,26 +38,51 @@ Node *init_node(Node *node, char *value, TokenType type){
     (*node).right = NULL;
     
     return node;
-} 
-
-
-void generate_operation_nodes(Token *current_token ,Node *current_node){
-    // we go until we get a non int or operator
-    while((*current_token).type == INT || (*current_token).type == OPERATOR){
-        if((*current_token).type == INT){
-            Node *expre_node = (Node*)malloc(sizeof(Node));
-            expre_node = init_node(expre_node, (*current_token).value, INT);
-            (*(*(*current_node).left).left).left = expre_node;
-        }
-        if((*current_token).type == OPERATOR){
-            Node *oper_node = (Node*)malloc(sizeof(Node));
-            oper_node = init_node(oper_node, (*current_token).value, OPERATOR);
-            (*(*current_node).left).left = oper_node;
-        }   
-        current_token++;
-    }
 }
 
+Node *parse_expression(Token **token_ptr) {
+    Token *current = *token_ptr;
+    
+    // Parse first integer
+    // if(current->type != INT) {
+    //     print_error(strdup("Expected integer at start of expression"));
+            //THINK NOT NEEDED
+    // }
+    
+    Node *left_expr = (Node*)malloc(sizeof(Node));
+    left_expr = init_node(left_expr, current->value, INT);
+    current++;
+    
+    // Continue parsing operators and operands as long as we find them
+    while((*current).type == OPERATOR) {
+        // Create operator node
+        Token *op_token = current;
+        Node *op_node = (Node*)malloc(sizeof(Node));
+        op_node = init_node(op_node, op_token->value, OPERATOR);
+        current++;
+        
+        // Parse right operand
+        if( (*current).type != INT) {
+            print_error(strdup("Expected integer after operator"));
+        }
+        
+        Node *right_expr = (Node*)malloc(sizeof(Node));
+        right_expr = init_node(right_expr, current->value, INT);
+        current++;
+        
+        // Link nodes - make operator the new root with left_expr as its left child
+        // and right_expr as its right child
+        (*op_node).left = left_expr;
+        (*op_node).right = right_expr;
+        
+        // Update left_expr for the next iteration
+        left_expr = op_node;
+    }
+    
+    // Update the token pointer
+    *token_ptr = current;
+    return left_expr;
+}
 
 Node *parser(Token *tokens) {
     Token *current_token = &tokens[0];
@@ -101,20 +120,14 @@ Node *parser(Token *tokens) {
                         }
                         
                         if((*current_token).type == INT) {
-                            current_token++;
-                            if((*current_token).type == OPERATOR) {   
-                                printf("SLALLAD\n");
-                                generate_operation_nodes(current_token, current);   
-                            } else {
-                                current_token--;
-                                Node *expre_node = (Node*)malloc(sizeof(Node));
-                                expre_node = init_node(expre_node, (*current_token).value, INT);
-                                (*(*current).left).left = expre_node;
-                                current_token++;
-                            }
-                            current_token++;
-                            current_token++;
-                            printf("current token: %s\n", (*current_token).value);
+                            printf("current TOKeN: %s\n", (*current_token).value);
+                            
+                            // Parse expression
+                            Node *expr_node = parse_expression(&current_token);
+                            (*(*current).left).left = expr_node;
+                            
+                            printf("Next toKen : %s\n", (*current_token).value);
+                            
                             if((*current_token).type == END_OF_TOKENS) {
                                 print_error(strdup("INVALID Syntax on CLOSE"));
                             }
@@ -156,7 +169,6 @@ Node *parser(Token *tokens) {
                 
             case SEPARATOR:
                 printf("SEPARATOR: %s", (*current_token).value);
-                
                 current_token++; 
                 break;
                 
@@ -178,41 +190,6 @@ Node *parser(Token *tokens) {
         }
         
         print_tree(root, 0, strdup("root"));
-
     }
     return root;
-
-} 
-
-
-
-
-
-
-// void generate_operation_nodes(Token *current_token ,Node *current_node){
-//     Node *oper_node = (Node*)malloc(sizeof(Node));
-//     oper_node = init_node(oper_node, (*current_token).value, OPERATOR);
-//     (*(*current_node).left).left = oper_node;
-//     while((*current_token).type == INT || (*current_token).type == OPERATOR){
-//         if((*current_token).type == INT){
-//             Node *expre_node = (Node*)malloc(sizeof(Node));
-//             expre_node = init_node(expre_node, (*current_token).value, INT);
-//             (*oper_node).left = expre_node;
-//             current_token++;
-//             printf("Current token value: %s",(*current_token).value); // should've printed ')'
-//         }
-//         if( (*current_token).type != INT || current_token != NULL){
-//             printf("SYNTAX ERROR\n");
-//             exit(1);
-//         }
-//         Node *second_expre_node = (Node*)malloc(sizeof(Node));
-//         second_expre_node = init_node(second_expre_node, (*current_token).value, INT);
-//         (*oper_node).right = second_expre_node;
-//     }
-    
-//     if( (*current_token).type == OPERATOR){
-//         //
-//     }
-//     current_token++;
-
-// }
+}
